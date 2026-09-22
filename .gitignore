@@ -1,0 +1,22 @@
+# PlatformIO build artifacts
+.pio/
+
+# Згенерований конфіг ESP-IDF (будь-яке ім’я оточення)
+sdkconfig
+sdkconfig.old
+sdkconfig.*
+!sdkconfig.defaults
+
+# Build directories, if any
+build/
+
+# VSCode generated files
+.vscode/.browse.c_cpp.db*
+.vscode/.browse.c_cpp_properties.json
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+.vscode/ipch/
+
+# Python caches
+__pycache__/
+*.pyc
