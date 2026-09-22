@@ -56,12 +56,7 @@ static void log_system_info(void)
 static void audio_task(void *arg)
 {
     (void)arg;
-    ESP_LOGI(TAG, "audio task started, core=%d", (int)xPortGetCoreID());
-
-    // TODO(audio): I2S RX/TX, DC-blocker, trim, EQ, volume ramp, limiter.
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    audio_task_entry(arg);
 }
 
 static void ctrl_task(void *arg)
@@ -75,10 +70,18 @@ static void ctrl_task(void *arg)
     while (1) {
         vTaskDelayUntil(&last_wake_tick, pdMS_TO_TICKS(5000));
         heartbeat++;
-        ESP_LOGI(TAG, "heartbeat=%lu state=%d free_heap=%u",
+
+        // Статистику аудіо читаємо ТУТ: лог з ctrl-задачі не створює пауз
+        // у audio-задачі (на відміну від логів з неї самої).
+        audio_stats_t st;
+        audio_get_stats(&st);
+        ESP_LOGI(TAG, "heartbeat=%lu state=%d heap=%u underrun=%lu overrun=%lu cpu=%lu%%",
                  (unsigned long)heartbeat,
                  (int)power_get_state(),
-                 (unsigned int)esp_get_free_heap_size());
+                 (unsigned int)esp_get_free_heap_size(),
+                 (unsigned long)st.underrun,
+                 (unsigned long)st.overrun,
+                 (unsigned long)st.cpu_load_percent);
     }
 }
 
@@ -86,7 +89,6 @@ static void input_task(void *arg)
 {
     (void)arg;
     ESP_LOGI(TAG, "input task started, core=%d", (int)xPortGetCoreID());
-
     // TODO(input): кнопки, енкодер (PCNT), антидребезг, події у system.
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(20));
@@ -97,7 +99,6 @@ static void ui_task(void *arg)
 {
     (void)arg;
     ESP_LOGI(TAG, "ui task started, core=%d", (int)xPortGetCoreID());
-
     // TODO(ui): ST7789 SPI, підсвітка LEDC, LVGL.
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -108,7 +109,6 @@ static void web_task(void *arg)
 {
     (void)arg;
     ESP_LOGI(TAG, "web task started, core=%d", (int)xPortGetCoreID());
-
     // TODO(web): Wi-Fi STA/AP, HTTP REST, WebSocket. У скелеті нічого не стартує.
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -128,10 +128,9 @@ void app_main(void)
     ESP_ERROR_CHECK(err);
 
     // 2. Апаратна платформа.
-    // Специфікація v2.2: відтепер XSMT тримає Low bsp; до цього моменту лінію
-    // тримав зовнішній pulldown 10 kOhm. Unmute (XSMT High) виконає ТІЛЬКИ power
+    // Специфікація v2.2: XSMT тримає Low bsp; до цього моменту лінію тримав
+    // зовнішній pulldown 10 kOhm. Unmute (XSMT High) виконає ТІЛЬКИ power
     // через power_audio_pipeline_ready() після готовності аудіопайплайну.
-    // У скелеті ЦАП навмисно лишається в mute.
     ESP_ERROR_CHECK(bsp_init());
 
     // 3. Шина подій.
@@ -146,7 +145,7 @@ void app_main(void)
              (int)settings.volume_db,
              (int)settings.display_backlight_on);
 
-    // 5. Компоненти.
+    // 5. Компоненти. (audio_init викликається рівно ОДИН раз)
     ESP_ERROR_CHECK(power_init());
     ESP_ERROR_CHECK(audio_init());
     ESP_ERROR_CHECK(tda7318_init());
@@ -159,10 +158,9 @@ void app_main(void)
     log_system_info();
 
     // 7. Задачі.
-    // audio -> core 1, високий пріоритет: ізольовано від Wi-Fi/UI на core 0.
+    // audio -> core 1, пріоритет 20: ізольовано від Wi-Fi/UI на core 0.
     // ctrl/input/ui/web -> core 0.
     bool tasks_ok = true;
-
     tasks_ok = tasks_ok && (xTaskCreatePinnedToCore(audio_task, "audio", 8192, NULL, 20, NULL, 1) == pdPASS);
     tasks_ok = tasks_ok && (xTaskCreatePinnedToCore(ctrl_task,  "ctrl",  4096, NULL, 10, NULL, 0) == pdPASS);
     tasks_ok = tasks_ok && (xTaskCreatePinnedToCore(input_task, "input", 4096, NULL, 10, NULL, 0) == pdPASS);
@@ -173,13 +171,9 @@ void app_main(void)
         ESP_LOGE(TAG, "Failed to create one or more tasks");
     }
 
-    // 8. Стан скелета. У реальній системі до готовності аудіо тримаємо BOOT/mute.
+    // 8. Стан скелета.
     ESP_ERROR_CHECK(power_set_state(POWER_STATE_RUN));
 
-    // TODO(power): інтеграція з esp_pm.
-    // RUN: аудіозадача тримає esp_pm_lock (max freq), STANDBY: lock звільняється,
-    // частота падає, Wi-Fi/display/audio вимкнені, XSMT mute, TDA mute.
-    // Приклад майбутнього коду:
-    // esp_pm_config_t pm_cfg = { .max_freq_mhz = 240, .min_freq_mhz = 20, .light_sleep_enable = false };
-    // esp_pm_configure(&pm_cfg);
+    // Старт транспортного шару (audio-A)
+    ESP_ERROR_CHECK(audio_pipeline_start());
 }

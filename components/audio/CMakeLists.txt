@@ -1,6 +1,3 @@
-﻿idf_component_register(
-    SRCS "audio.c"
-    INCLUDE_DIRS "include"
-    REQUIRES bsp system esp_common log
-    PRIV_REQUIRES driver
-)
+idf_component_register(SRCS "audio.c"
+                       INCLUDE_DIRS "include"
+                       REQUIRES bsp power freertos esp_driver_i2s esp_pm esp_timer)

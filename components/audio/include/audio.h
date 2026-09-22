@@ -1,14 +1,23 @@
-﻿#pragma once
+#pragma once
 
+#include "esp_err.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include "esp_err.h"
 #include "bsp.h"
 
-#define AUDIO_VOLUME_MIN_DB (-90)
-#define AUDIO_VOLUME_MAX_DB 0
+typedef struct {
+    uint32_t underrun;
+    uint32_t overrun;
+    uint32_t cpu_load_percent;
+} audio_stats_t;
 
 esp_err_t audio_init(void);
+esp_err_t audio_pipeline_start(void);
+esp_err_t audio_pipeline_stop(void);
+esp_err_t audio_get_stats(audio_stats_t *stats);
+
+void audio_task_entry(void *arg);
+
 esp_err_t audio_start(void);
 esp_err_t audio_stop(void);
 esp_err_t audio_set_source(bsp_audio_source_t source);
