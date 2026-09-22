@@ -128,6 +128,10 @@ void app_main(void)
     ESP_ERROR_CHECK(err);
 
     // 2. Апаратна платформа.
+    // Специфікація v2.2: відтепер XSMT тримає Low bsp; до цього моменту лінію
+    // тримав зовнішній pulldown 10 kOhm. Unmute (XSMT High) виконає ТІЛЬКИ power
+    // через power_audio_pipeline_ready() після готовності аудіопайплайну.
+    // У скелеті ЦАП навмисно лишається в mute.
     ESP_ERROR_CHECK(bsp_init());
 
     // 3. Шина подій.
