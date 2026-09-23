@@ -7,7 +7,7 @@
 
 | № | Компонент | Опис | Статус | Коміт |
 |---|---|---|:---:|---|
-| 1 | audio-A | I2S-транспорт: RX PCM1808 + TX PCM5102, 48 kHz, DMA internal RAM, задача core 1, esp_pm lock, прямий прохід RX→TX, unmute через power_audio_pipeline_ready() | ⏳ | |
+| 1 | audio-A | I2S-транспорт: RX PCM1808 + TX PCM5102, 48 kHz, DMA internal RAM, задача core 1, esp_pm lock, прямий прохід RX→TX, unmute через power_audio_pipeline_ready() | ✅ | 9b001f0 |
 | 2 | audio-B | DSP-ланцюжок: DC-blocker → per-source trim → 10-смуговий EQ (biquad peaking) → гучність -90..0 dB з ramp → лімітер | ⏳ | |
 | 3 | tda7318 | I2C-драйвер селектора: мапа джерело→канал, mute у STANDBY, mute-перед-переключенням | ⏳ | |
 | 4 | input | Кнопки (GPIO ISR→черга) + енкодер (PCNT) + антидребезг + short/long | ⏳ | |
@@ -128,6 +128,7 @@
 
 | Дата | Версія | Зміни |
 |---|---|---|
+| 2026-09-23 | v2.2.2 | Примітки: driver slot 32 / дані 24 MSB-aligned (обмеження ESP-IDF mclk_multiple); неблокувальна черга команд у running; hot-path без логів |
 | 2026-09-22 | v2.2.1 | DMA тільки internal RAM; ui.2 = LVGL; ir + навчання RC5; web + mDNS/captive/OTA-hook; settings + IR-карта/пресети/останній стан/Wi-Fi; power + фільтр wake-подій |
 | 2026-09-22 | v2.2 | XSMT=GPIO45 + апаратна вимога pulldown 10 kΩ; уточнено тактування 48 kHz/64fs/256fs; власник unmute — power |
 | 2026-09-22 | v2.1 | EQ 10-смуговий графічний + пресети; standby: Wi-Fi off, wake тільки POWER/RC5-power; IR: RC5; Web UI українською |
