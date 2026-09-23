@@ -1,0 +1,98 @@
+/*
+ * dsp_math.c — платформо-незалежна чиста DSP-математика.
+ * БЕЗ esp-заголовків: юніт-тести бігаються на host.
+ */
+
+#include "dsp_math.h"
+#include <math.h>
+#include <string.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846f
+#endif
+
+void dsp_calc_biquad_peaking(biquad_coeffs_t *c, float freq, float q,
+                             float gain_db, float fs)
+{
+    float A     = powf(10.0f, gain_db / 40.0f);
+    float w0    = 2.0f * M_PI * freq / fs;
+    float alpha = sinf(w0) / (2.0f * q);
+
+    float b0 =  1.0f + alpha * A;
+    float b1 = -2.0f * cosf(w0);
+    float b2 =  1.0f - alpha * A;
+    float a0 =  1.0f + alpha / A;
+    float a1 = -2.0f * cosf(w0);
+    float a2 =  1.0f - alpha / A;
+
+    c->b0 = b0 / a0;  c->b1 = b1 / a0;  c->b2 = b2 / a0;
+    c->a1 = a1 / a0;  c->a2 = a2 / a0;
+}
+
+void dsp_biquad_process(float *buf, uint32_t frames,
+                        const biquad_coeffs_t *c, biquad_state_t *s)
+{
+    float x1 = s->x1, x2 = s->x2, y1 = s->y1, y2 = s->y2;
+    float b0 = c->b0, b1 = c->b1, b2 = c->b2, a1 = c->a1, a2 = c->a2;
+
+    for (uint32_t i = 0; i < frames; i++) {
+        float x = buf[i];
+        float y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+        buf[i] = y;
+        x2 = x1; x1 = x;
+        y2 = y1; y1 = y;
+    }
+    s->x1 = x1; s->x2 = x2; s->y1 = y1; s->y2 = y2;
+}
+
+void dsp_calc_dc_blocker(float *R, float fc, float fs)
+{
+    *R = expf(-2.0f * M_PI * fc / fs);
+}
+
+void dsp_dc_blocker_process(float *buf, uint32_t frames, float R,
+                            dc_blocker_state_t *s)
+{
+    float x_prev = s->x_prev;
+    float y_prev = s->y_prev;
+    for (uint32_t i = 0; i < frames; i++) {
+        float x = buf[i];
+        float y = x - x_prev + R * y_prev;
+        buf[i]  = y;
+        x_prev  = x;
+        y_prev  = y;
+    }
+    s->x_prev = x_prev; s->y_prev = y_prev;
+}
+
+void dsp_update_ramp(volume_ramp_state_t *s, float current_db,
+                     float target_db, float fs)
+{
+    s->target_gain_lin = powf(10.0f, target_db / 20.0f);
+    float samples = 0.030f * fs;   /* 30 мс */
+    if (samples < 1.0f) samples = 1.0f;
+    float db_diff = fabsf(target_db - current_db);
+
+    if (db_diff < 0.01f) {
+        s->multiplier = 1.0f;      /* вже на місці */
+    } else {
+        float db_step = db_diff / samples;
+        s->multiplier = powf(10.0f, db_step / 20.0f);
+    }
+}
+
+void dsp_limiter_process(float *buf, uint32_t frames, float ceiling_lin,
+                         float alpha_a, float alpha_r, limiter_state_t *s)
+{
+    float env = s->envelope;
+    for (uint32_t i = 0; i < frames; i++) {
+        float abs_x = fabsf(buf[i]);
+        if (abs_x > env) {
+            env = abs_x + alpha_a * (env - abs_x);
+        } else {
+            env = abs_x + alpha_r * (env - abs_x);
+        }
+        buf[i] *= (env > ceiling_lin) ? (ceiling_lin / env) : 1.0f;
+    }
+    s->envelope = env;
+}
