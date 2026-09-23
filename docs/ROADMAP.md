@@ -8,7 +8,7 @@
 | № | Компонент | Опис | Статус | Коміт |
 |---|---|---|:---:|---|
 | 1 | audio-A | I2S-транспорт: RX PCM1808 + TX PCM5102, 48 kHz, DMA internal RAM, задача core 1, esp_pm lock, прямий прохід RX→TX, unmute через power_audio_pipeline_ready() | ✅ | 9b001f0 |
-| 2 | audio-B | DSP-ланцюжок: DC-blocker → per-source trim → 10-смуговий EQ (biquad peaking) → гучність -90..0 dB з ramp → лімітер | ⏳ | |
+| 2 | audio-B | DSP-ланцюжок: DC-blocker → per-source trim → 10-смуговий EQ (biquad peaking) → гучність -90..0 dB з ramp → лімітер | ✅ | e46472b, 9796ebc |
 | 3 | tda7318 | I2C-драйвер селектора: мапа джерело→канал, mute у STANDBY, mute-перед-переключенням | ⏳ | |
 | 4 | input | Кнопки (GPIO ISR→черга) + енкодер (PCNT) + антидребезг + short/long | ⏳ | |
 | 5 | ui | Фаза 5.1: ST7789 SPI + підсвітка LEDC, перші екрани без LVGL. Фаза 5.2: LVGL зі сторінками Main / Source / EQ / Settings / Info, draw-буфери в PSRAM + bounce-buffer в internal RAM | ⏳ | |
@@ -128,6 +128,7 @@
 
 | Дата | Версія | Зміни |
 |---|---|---|
+| 2026-09-24 | v2.2.3 | Уточнено критерій перетину сусідніх смуг EQ (≤0.5 dB @ ±2 dB, ≤1.5 dB @ ±6 dB, by design); лімітер: peak-catch attack з інваріантом env ≥ |x| |
 | 2026-09-23 | v2.2.2 | Примітки: driver slot 32 / дані 24 MSB-aligned (обмеження ESP-IDF mclk_multiple); неблокувальна черга команд у running; hot-path без логів |
 | 2026-09-22 | v2.2.1 | DMA тільки internal RAM; ui.2 = LVGL; ir + навчання RC5; web + mDNS/captive/OTA-hook; settings + IR-карта/пресети/останній стан/Wi-Fi; power + фільтр wake-подій |
 | 2026-09-22 | v2.2 | XSMT=GPIO45 + апаратна вимога pulldown 10 kΩ; уточнено тактування 48 kHz/64fs/256fs; власник unmute — power |
