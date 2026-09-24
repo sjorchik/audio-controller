@@ -148,7 +148,14 @@ void app_main(void)
     // 5. Компоненти. (audio_init викликається рівно ОДИН раз)
     ESP_ERROR_CHECK(power_init());
     ESP_ERROR_CHECK(audio_init());
-    ESP_ERROR_CHECK(tda7318_init());
+    // Пункт 3: помилка I2C не фатальна — лічимо і працюємо далі (селектор
+    // недоступний, dev-консоль жива для діагностики). У пункті 8 (power state
+    // machine) цей виклик переводитиме систему у стан ERROR.
+    esp_err_t tda_err = tda7318_init();
+    if (tda_err != ESP_OK) {
+        ESP_LOGE(TAG, "TDA7318 init failed: %s — селектор недоступний",
+                 esp_err_to_name(tda_err));
+    }
     ESP_ERROR_CHECK(input_init());
     ESP_ERROR_CHECK(ir_init());
     ESP_ERROR_CHECK(ui_init());

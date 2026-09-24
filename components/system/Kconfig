@@ -1,0 +1,10 @@
+menu "System Configuration"
+    config APP_DEV_CONSOLE
+        bool "Enable Development Console"
+        default n
+        help
+            Увімкнути інтерактивну dev-консоль для bring-up та тестів.
+            Команди: i2cscan, src <0..3>, mute <0|1>, stats
+            
+            Вимкнено у продакшн-збірках для економії RAM та безпеки.
+endmenu

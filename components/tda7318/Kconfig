@@ -1,0 +1,13 @@
+menu "TDA7318 selector (roadmap item 3)"
+    choice APP_SELECTOR_CHIP
+        prompt "Audio selector chip on board"
+        default APP_SELECTOR_CHIP_TDA7318
+        help
+            Цільова плата за ROADMAP — TDA7318. Для тестового стенду
+            допускається PT2313 (клон TDA7313): байти команд інші.
+        config APP_SELECTOR_CHIP_TDA7318
+            bool "TDA7318 (цільова)"
+        config APP_SELECTOR_CHIP_PT2313
+            bool "PT2313 / TDA7313 (стенд)"
+    endchoice
+endmenu
