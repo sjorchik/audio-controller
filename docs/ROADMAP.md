@@ -10,7 +10,7 @@
 | 1 | audio-A | I2S-транспорт: RX PCM1808 + TX PCM5102, 48 kHz, DMA internal RAM, задача core 1, esp_pm lock, прямий прохід RX→TX, unmute через power_audio_pipeline_ready() | ✅ | 9b001f0 |
 | 2 | audio-B | DSP-ланцюжок: DC-blocker → per-source trim → 10-смуговий EQ (biquad peaking) → гучність -90..0 dB з ramp → лімітер | ✅ | e46472b, 9796ebc |
 | 3 | tda7318 | I2C-драйвер селектора: мапа джерело→канал, mute у STANDBY, mute-перед-переключенням | ✅ | c1803d4 |
-| 4 | input | Кнопки (GPIO ISR→черга) + енкодер (PCNT) + антидребезг + short/long | ⏳ | |
+| 4 | input | Кнопки (GPIO ISR→черга) + енкодер (PCNT) + антидребезг + short/long | ✅ | ca5cf80 |
 | 5 | ui | Фаза 5.1: ST7789 SPI + підсвітка LEDC, перші екрани без LVGL. Фаза 5.2: LVGL зі сторінками Main / Source / EQ / Settings / Info, draw-буфери в PSRAM + bounce-buffer в internal RAM | ⏳ | |
 | 6 | ir | RMT RX + декодер RC5 + режим навчання (захват коду → прив'язка дії → NVS) + коректна обробка RC5-repeats | ⏳ | |
 | 7 | web | Wi-Fi STA + AP captive portal provisioning + HTTP REST + WebSocket + mDNS (audioctrl.local) + український Web UI з ассетами у LittleFS + OTA-hook (API-заглушка) | ⏳ | |
