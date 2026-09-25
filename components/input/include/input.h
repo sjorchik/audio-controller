@@ -1,27 +1,22 @@
 ﻿#pragma once
 
-#include <stdint.h>
 #include "esp_err.h"
+#include "system.h" // Для типів input_source_t, input_action_t, input_event_t
 
-typedef enum {
-    INPUT_EVENT_NONE = 0,
-    INPUT_EVENT_POWER_SHORT,
-    INPUT_EVENT_POWER_LONG,
-    INPUT_EVENT_UP_SHORT,
-    INPUT_EVENT_DOWN_SHORT,
-    INPUT_EVENT_LEFT_SHORT,
-    INPUT_EVENT_RIGHT_SHORT,
-    INPUT_EVENT_OK_SHORT,
-    INPUT_EVENT_ENCODER_CW,
-    INPUT_EVENT_ENCODER_CCW,
-    INPUT_EVENT_ENCODER_CLICK,
-    INPUT_EVENT_ENCODER_LONG,
-    INPUT_EVENT_MAX
-} input_event_t;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef struct {
-    input_event_t event;
-    uint32_t arg;
-} input_event_data_t;
-
+/**
+ * @brief Ініціалізація підсистеми вводу (GPIO, PCNT).
+ */
 esp_err_t input_init(void);
+
+/**
+ * @brief Основний цикл задачі input (викликається з app_main).
+ */
+void input_task_entry(void *arg);
+
+#ifdef __cplusplus
+}
+#endif

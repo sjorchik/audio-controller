@@ -89,10 +89,7 @@ static void input_task(void *arg)
 {
     (void)arg;
     ESP_LOGI(TAG, "input task started, core=%d", (int)xPortGetCoreID());
-    // TODO(input): кнопки, енкодер (PCNT), антидребезг, події у system.
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(20));
-    }
+    input_task_entry(arg);
 }
 
 static void ui_task(void *arg)

@@ -1,7 +1,7 @@
 ﻿/*
  * system.c — системний компонент: шина подій + dev-консоль bring-up.
  *
- * Dev-консоль (CONFIG_APP_DEV_CONSOLE): команди i2cscan / src / mute / stats / raw
+ * Dev-консоль (CONFIG_APP_DEV_CONSOLE): команди i2cscan / src / mute / stats / raw / evmon
  * реалізовані через esp_console, але читання рядків виконує ВЛАСНА задача
  * (посимвольний fgetc з echo), бо linenoise-REPL у no-TTY режимі спотворює
  * символи завершення рядка (CR/LF) і команди не розпізнаються.
@@ -28,6 +28,7 @@
 static const char *TAG = "system";
 
 #ifdef CONFIG_APP_DEV_CONSOLE
+static bool s_evmon_enabled = false;
 
 /* ────────────────────────────────────────────────────────────────
  * Обробники команд
@@ -128,7 +129,7 @@ static int cmd_raw(int argc, char **argv)
         return 1;
     }
     char *end = NULL;
-    unsigned long v = strtoul(raw_args.val->sval[0], &end, 0);   // приймає 0x..
+    unsigned long v = strtoul(raw_args.val->sval[0], &end, 0);
     if (end == raw_args.val->sval[0] || v > 0xFF) {
         ESP_LOGE(TAG, "Потрібен байт 0x00..0xFF");
         return 1;
@@ -138,11 +139,25 @@ static int cmd_raw(int argc, char **argv)
     return (ret == ESP_OK) ? 0 : 1;
 }
 
+static int cmd_evmon(int argc, char **argv)
+{
+    if (argc == 2 && strcmp(argv[1], "on") == 0) {
+        s_evmon_enabled = true;
+        printf("evmon: enabled\n");
+    } else if (argc == 2 && strcmp(argv[1], "off") == 0) {
+        s_evmon_enabled = false;
+        printf("evmon: disabled\n");
+    } else {
+        printf("Usage: evmon on|off\n");
+    }
+    return 0;
+}
+
 /* ────────────────────────────────────────────────────────────────
  * Власний читач рядків (замість linenoise-REPL)
  * ──────────────────────────────────────────────────────────────── */
 
-static void dev_console_reader_task(void *arg);   // forward declaration
+static void dev_console_reader_task(void *arg);
 
 static void dev_console_init(void)
 {
@@ -151,13 +166,10 @@ static void dev_console_init(void)
     repl_config.prompt = "audio-ctrl>";
     repl_config.max_cmdline_length = 256;
 
-    // Ініціалізує консольний UART та реєстр команд esp_console.
-    // REPL-задачу (linenoise) НЕ стартуємо — читання рядків власне (нижче).
     esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_console_new_repl_uart(&hw_config, &repl_config, &repl));
     (void)repl;
 
-    // Команда i2cscan
     esp_console_cmd_t i2cscan_cmd = {
         .command = "i2cscan",
         .help = "Сканування I2C шини",
@@ -165,7 +177,6 @@ static void dev_console_init(void)
     };
     ESP_ERROR_CHECK(esp_console_cmd_register(&i2cscan_cmd));
 
-    // Команда src <0..3>
     src_args.src = arg_int1(NULL, NULL, "<0..3>",
                             "Джерело (0=TV_BOX, 1=COMPUTER, 2=BLUETOOTH, 3=AUX)");
     src_args.end = arg_end(1);
@@ -177,7 +188,6 @@ static void dev_console_init(void)
     };
     ESP_ERROR_CHECK(esp_console_cmd_register(&src_cmd));
 
-    // Команда mute <0|1>
     mute_args.mute = arg_int1(NULL, NULL, "<0|1>", "Mute селектора (0=unmute, 1=mute)");
     mute_args.end = arg_end(1);
     esp_console_cmd_t mute_cmd = {
@@ -188,7 +198,6 @@ static void dev_console_init(void)
     };
     ESP_ERROR_CHECK(esp_console_cmd_register(&mute_cmd));
 
-    // Команда stats
     esp_console_cmd_t stats_cmd = {
         .command = "stats",
         .help = "Показати статистику драйвера селектора",
@@ -196,7 +205,6 @@ static void dev_console_init(void)
     };
     ESP_ERROR_CHECK(esp_console_cmd_register(&stats_cmd));
 
-    // Команда raw (bring-up діагностика кодів селектора)
     raw_args.val = arg_str1(NULL, NULL, "<byte>", "Байт команди (hex, напр. 0x00)");
     raw_args.end = arg_end(1);
     esp_console_cmd_t raw_cmd = {
@@ -207,13 +215,18 @@ static void dev_console_init(void)
     };
     ESP_ERROR_CHECK(esp_console_cmd_register(&raw_cmd));
 
-    // Self-check реєстру: програмний виклик команди, минаючи термінальний ввід
+    esp_console_cmd_t evmon_cmd = {
+        .command = "evmon",
+        .help = "Монітор подій input (evmon on|off)",
+        .func = &cmd_evmon,
+    };
+    ESP_ERROR_CHECK(esp_console_cmd_register(&evmon_cmd));
+
     int self_ret = 0;
     esp_err_t run_err = esp_console_run("stats", &self_ret);
     ESP_LOGI(TAG, "registry self-check: esp_console_run(\"stats\") -> %s",
              esp_err_to_name(run_err));
 
-    // Власна задача читання рядків
     if (xTaskCreate(dev_console_reader_task, "console_rd", 4096, NULL, 5, NULL) != pdPASS) {
         ESP_LOGE(TAG, "Не вдалося створити задачу читання консолі");
         return;
@@ -221,13 +234,6 @@ static void dev_console_init(void)
     ESP_LOGI(TAG, "Dev-консоль запущена (власний reader, prompt: audio-ctrl>)");
 }
 
-/*
- * Мінімальний рядковий редактор: посимвольне читання з stdin, echo,
- * backspace, завершення по CR або LF (CRLF з'їдається коректно).
- * Не залежить від TTY/escape-підтримки термінала.
- * Логи інших задач можуть візуально перебивати рядок вводу — це
- * нормально для dev-консолі, введена команда все одно виконається.
- */
 static void dev_console_reader_task(void *arg)
 {
     (void)arg;
@@ -235,7 +241,7 @@ static void dev_console_reader_task(void *arg)
     size_t pos = 0;
     bool prev_cr = false;
 
-    vTaskDelay(pdMS_TO_TICKS(300));   // дочекатися старту UART-консолі
+    vTaskDelay(pdMS_TO_TICKS(300));
     fputs("audio-ctrl> ", stdout);
     fflush(stdout);
 
@@ -246,7 +252,6 @@ static void dev_console_reader_task(void *arg)
             continue;
         }
 
-        /* CRLF: '\n' одразу після '\r' не вважаємо новим рядком */
         if (c == '\n' && prev_cr) {
             prev_cr = false;
             continue;
@@ -258,7 +263,6 @@ static void dev_console_reader_task(void *arg)
             line[pos] = '\0';
             pos = 0;
 
-            /* Захист від вставки рядка разом із prompt'ом: відрізаємо префікс */
             const char *pfx = "audio-ctrl> ";
             size_t pfx_len = strlen(pfx);
             if (strncmp(line, pfx, pfx_len) == 0) {
@@ -279,7 +283,7 @@ static void dev_console_reader_task(void *arg)
             continue;
         }
 
-        if (c == 0x7F || c == 0x08) {          // Backspace
+        if (c == 0x7F || c == 0x08) {
             if (pos > 0) {
                 pos--;
                 fputs("\b \b", stdout);
@@ -290,17 +294,13 @@ static void dev_console_reader_task(void *arg)
 
         if (c >= 0x20 && pos < sizeof(line) - 1) {
             line[pos++] = (char)c;
-            fputc(c, stdout);                  // echo введеного символу
+            fputc(c, stdout);
             fflush(stdout);
         }
     }
 }
 
 #endif /* CONFIG_APP_DEV_CONSOLE */
-
-/* ────────────────────────────────────────────────────────────────
- * Публічне API компонента system
- * ──────────────────────────────────────────────────────────────── */
 
 esp_err_t system_init(void)
 {
@@ -312,9 +312,21 @@ esp_err_t system_init(void)
 
 esp_err_t system_post(system_event_id_t event_id, const void *data, size_t data_size)
 {
+#ifdef CONFIG_APP_DEV_CONSOLE
+    if (event_id == SYSTEM_EVENT_INPUT && s_evmon_enabled && data && data_size == sizeof(input_event_t)) {
+        const input_event_t *evt = (const input_event_t *)data;
+        const char *src_names[] = {"NONE", "BTN_POWER", "BTN_UP", "BTN_DOWN", "BTN_LEFT", "BTN_RIGHT", "BTN_OK", "ENC_BTN", "ENC_STEP"};
+        const char *act_names[] = {"NONE", "SHORT", "LONG", "REPEAT", "STEP"};
+        if (evt->source < INPUT_SRC_MAX && evt->action < 5) {
+            printf("EVMON: %s %s arg=%d ts=%lu\n",
+                   src_names[evt->source], act_names[evt->action], evt->arg, (unsigned long)evt->timestamp_ms);
+            fflush(stdout);
+        }
+    }
+#else
     (void)event_id;
     (void)data;
     (void)data_size;
-    // TODO: реалізація шини подій у майбутніх пунктах ROADMAP
-    return ESP_ERR_NOT_SUPPORTED;
+#endif
+    return ESP_OK;
 }
