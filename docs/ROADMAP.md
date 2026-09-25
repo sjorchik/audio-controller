@@ -10,8 +10,8 @@
 | 1 | audio-A | I2S-транспорт: RX PCM1808 + TX PCM5102, 48 kHz, DMA internal RAM, задача core 1, esp_pm lock, прямий прохід RX→TX, unmute через power_audio_pipeline_ready() | ✅ | 9b001f0 |
 | 2 | audio-B | DSP-ланцюжок: DC-blocker → per-source trim → 10-смуговий EQ (biquad peaking) → гучність -90..0 dB з ramp → лімітер | ✅ | e46472b, 9796ebc |
 | 3 | tda7318 | I2C-драйвер селектора: мапа джерело→канал, mute у STANDBY, mute-перед-переключенням | ✅ | c1803d4 |
-| 4 | input | Кнопки (GPIO ISR→черга) + енкодер (PCNT) + антидребезг + short/long | ✅ | ca5cf80 |
-| 5 | ui | Фаза 5.1: ST7789 SPI + підсвітка LEDC, перші екрани без LVGL. Фаза 5.2: LVGL зі сторінками Main / Source / EQ / Settings / Info, draw-буфери в PSRAM + bounce-buffer в internal RAM | ⏳ | |
+| 4 | input | Кнопки (GPIO ISR→черга) + енкодер (PCNT) + антидребезг + short/long | ✅ | ca5cf80, a4e95df |
+| 5 | ui | ST7789 SPI + підсвітка LEDC 5 kHz + LVGL 9: сторінки Main / Source / EQ / Settings / Info, навігація за картою керування v2.2.5, рендер стану моделі через події; draw-буфери LVGL у PSRAM + bounce-buffer esp_lcd в internal RAM; bring-up через dev-команду lcdtest | ⏳ | |
 | 6 | ir | RMT RX + декодер RC5 + режим навчання (захват коду → прив'язка дії → NVS) + коректна обробка RC5-repeats | ⏳ | |
 | 7 | web | Wi-Fi STA + AP captive portal provisioning + HTTP REST + WebSocket + mDNS (audioctrl.local) + український Web UI з ассетами у LittleFS + OTA-hook (API-заглушка) | ⏳ | |
 | 8 | power/state | State machine BOOT/RUN/STANDBY/ERROR: зупинка I2S-тактів, XSMT+TDA mute, Wi-Fi/дисплей off, зниження частоти через esp_pm, wake ТІЛЬКИ POWER-кнопка або RC5-power (фільтр подій) | ⏳ | |
@@ -128,6 +128,7 @@
 
 | Дата | Версія | Зміни |
 |---|---|---|
+| 2026-09-25 | v2.2.5 | input_event_t у system.h; CPD default 2 + enccal; архітектура: модель розсилає стан, HMI викликає сетери, power володіє POWER; ui 5.1+5.2 об'єднані (LVGL одразу); карта керування v2.2.5 |
 | 2026-09-24 | v2.2.4 | Селектор: CONFIG_APP_SELECTOR_CHIP (TDA7318/PT2313); mute = attenuation 0x3F (немає hw mute-біта); tone-flat коди чипо-залежні; dev-консоль = власний line-reader |
 | 2026-09-24 | v2.2.3 | Уточнено критерій перетину сусідніх смуг EQ (≤0.5 dB @ ±2 dB, ≤1.5 dB @ ±6 dB, by design); лімітер: peak-catch attack з інваріантом env ≥ |x| |
 | 2026-09-23 | v2.2.2 | Примітки: driver slot 32 / дані 24 MSB-aligned (обмеження ESP-IDF mclk_multiple); неблокувальна черга команд у running; hot-path без логів |
@@ -136,3 +137,10 @@
 | 2026-09-22 | v2.1 | EQ 10-смуговий графічний + пресети; standby: Wi-Fi off, wake тільки POWER/RC5-power; IR: RC5; Web UI українською |
 | 2026-09-22 | v2 | Додано Wi-Fi + Web UI + IR-пульт; DSP: гучність + EQ; standby замість повного вимкнення |
 | 2026-09-22 | v1 | Початкова специфікація |
+
+## Відкриті апаратні дії
+
+| Дія | Статус |
+|---|---|
+| Енкодер: замір CPD через enccal + прогін на мертві кліки на production-зразку | ⏳ до пункту 10 |
+| XSMT: pulldown 10 kΩ у наступній ревізії плати | ⏳ залізо |
