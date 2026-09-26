@@ -1,3 +1,4 @@
+// Файл: components/audio/audio_process.c
 /*
  * audio_process.c — DSP-стан та реалізація API з audio.h.
  *
@@ -7,12 +8,16 @@
  *
  * Стани фільтрів (s_dc, s_eq, s_ramp, s_lim) — статичні, у BSS,
  * в internal RAM. Жодних динамічних алокацій у process path.
+ *
+ * Архітектура v2.2.5: модель розсилає події зміни стану в шину system
+ * після будь-якого сетера (SYSTEM_EVT_AUDIO_STATE).
  */
 
 #include "audio.h"                 /* публічне API (volume, EQ, preset, trim) */
 #include "audio_process.h"         /* audio_process_init / audio_process_block */
 #include "dsp_math.h"              /* чиста DSP-математика */
 #include "dsp_presets.h"           /* центри смуг і таблиці пресетів */
+#include "system.h"                /* broadcast-події стану */
 #include <stdatomic.h>
 #include <string.h>
 #include <math.h>
@@ -191,6 +196,7 @@ void audio_process_block(int32_t *in_buf, int32_t *out_buf, uint32_t frames)
 /* ────────────────────────────────────────────────────────────────
  * API (викликається з ctrl-задачі, потокобезпечно через commit)
  * Реалізація оголошень з audio.h
+ * Архітектура v2.2.5: кожен сетер постить SYSTEM_EVT_AUDIO_STATE
  * ──────────────────────────────────────────────────────────────── */
 
 void audio_set_volume_db(float db)
@@ -201,6 +207,7 @@ void audio_set_volume_db(float db)
     shd->volume_db = db;
     config_update_ramps(shd);
     config_commit();
+    system_post(SYSTEM_EVT_AUDIO_STATE, NULL, 0);
 }
 
 float audio_get_volume_db(void)
@@ -215,6 +222,13 @@ void audio_set_mute(bool mute)
     shd->mute = mute;
     config_update_ramps(shd);
     config_commit();
+    system_post(SYSTEM_EVT_AUDIO_STATE, NULL, 0);
+}
+
+bool audio_get_mute(void)
+{
+    audio_config_t *cfg = atomic_load_explicit(&s_active, memory_order_acquire);
+    return cfg->mute;
 }
 
 void audio_set_eq_band(uint8_t idx, float db)
@@ -228,6 +242,7 @@ void audio_set_eq_band(uint8_t idx, float db)
                             db, AUDIO_SAMPLE_RATE);
     shd->current_preset = AUDIO_EQ_PRESET_MAX;  /* кастомний стан, не пресет */
     config_commit();
+    system_post(SYSTEM_EVT_AUDIO_STATE, NULL, 0);
 }
 
 void audio_get_eq(float out[10])
@@ -244,6 +259,7 @@ void audio_set_preset(audio_eq_preset_t preset)
     audio_config_t *shd = atomic_load_explicit(&s_shadow, memory_order_relaxed);
     config_apply_preset(shd, preset);
     config_commit();
+    system_post(SYSTEM_EVT_AUDIO_STATE, NULL, 0);
 }
 
 audio_eq_preset_t audio_get_preset(void)
@@ -258,6 +274,7 @@ void audio_set_source(bsp_audio_source_t source)
     audio_config_t *shd = atomic_load_explicit(&s_shadow, memory_order_relaxed);
     shd->active_source = source;
     config_commit();
+    system_post(SYSTEM_EVT_AUDIO_STATE, NULL, 0);
 }
 
 void audio_set_source_trim_db(bsp_audio_source_t source, float db)
@@ -268,6 +285,7 @@ void audio_set_source_trim_db(bsp_audio_source_t source, float db)
     audio_config_t *shd = atomic_load_explicit(&s_shadow, memory_order_relaxed);
     shd->trim_gains[source] = powf(10.0f, db / 20.0f);
     config_commit();
+    system_post(SYSTEM_EVT_AUDIO_STATE, NULL, 0);
 }
 
 float audio_get_source_trim_db(bsp_audio_source_t source)

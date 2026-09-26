@@ -1,18 +1,17 @@
-﻿#pragma once
+﻿// Файл: components/ui/include/ui.h
+#pragma once
 
 #include <stdint.h>
 #include "esp_err.h"
 
-typedef enum {
-    UI_PAGE_HOME = 0,
-    UI_PAGE_SOURCE,
-    UI_PAGE_VOLUME,
-    UI_PAGE_EQ,
-    UI_PAGE_STANDBY,
-    UI_PAGE_ERROR,
-    UI_PAGE_MAX
-} ui_page_t;
-
+/* Ініціалізація bring-up: SPI ST7789, підсвітка LEDC, LVGL, екрани.
+ * Викликається один раз з app_main ДО створення задачі ui. */
 esp_err_t ui_init(void);
-esp_err_t ui_show_page(ui_page_t page);
-esp_err_t ui_set_backlight_percent(uint32_t percent);
+
+/* Тіло задачі ui (core 0, пріоритет 8): tick-очікування подій шини system,
+ * event-driven рендер + fallback 100 мс, lv_timer_handler(). */
+void ui_task_entry(void *arg);
+
+/* Dev-команда bring-up: тест-патерни для перевірки offsets/кольорів.
+ * Реєструється консоллю (system.c) через extern-оголошення. */
+int ui_cmd_lcdtest(int argc, char **argv);

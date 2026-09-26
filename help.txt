@@ -1,0 +1,58 @@
+-------------команди-------------
+Remove-Item sdkconfig.esp32-s3-devkitc-1, sdkconfig.esp32-s3-devkitc-1.old -ErrorAction SilentlyContinue
+pio run -t clean
+pio run -t upload
+---------------------------------
+
+-------------консоль-------------
+pio run -t menuconfig
+
+ввімкнути передачу уарт
+/
+APP_DEV_CONSOLE
+
+вибрати аудіопроц
+/
+APP_SELECTOR_CHIP
+
+Перемикання орієнтації: runtime — lcdtest orient 1 1 0 / lcdtest orient 1 0 1; 
+для збірки під монтаж — pio run -t menuconfig → Audio controller UI → Display mounting orientation.
+----------------------------------
+
+----------керування уарт----------
+help
+
+i2cscan 
+  Сканування I2C шини
+
+src 0
+src 1
+src 2
+src 3
+  Перемикання джерела аудіо (безклікова
+  послідовність)
+        <0..3>  Джерело (0=TV_BOX, 1=COMPUTER, 2=BLUETOOTH, 3=AUX)
+
+mute 0
+mute 1
+  Керування soft mute селектора
+         <0|1>  Mute селектора (0=unmute, 1=mute)
+
+stats 
+  Показати статистику драйвера селектора
+
+raw  <byte>
+  Bring-up: прямий запис байта команди
+  селектора
+        <byte>  Байт команди (hex, напр. 0x00)
+
+evmon on
+evmon off
+  Монітор подій input 
+
+enccal 
+  Калібрування енкодера: enccal 20 - повернути енкодер на 20 клацань
+  enccal <detents>
+  enccal stop
+  enccal off
+----------------------------------
