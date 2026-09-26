@@ -2,18 +2,15 @@
 Remove-Item sdkconfig.esp32-s3-devkitc-1, sdkconfig.esp32-s3-devkitc-1.old -ErrorAction SilentlyContinue
 pio run -t clean
 pio run -t upload
+(після змін sdkconfig.defaults обов'язково clean)
 ---------------------------------
 
 -------------консоль-------------
 pio run -t menuconfig
 
-ввімкнути передачу уарт
-/
-APP_DEV_CONSOLE
+ввімкнути передачу уарт / APP_DEV_CONSOLE
 
-вибрати аудіопроц
-/
-APP_SELECTOR_CHIP
+вибрати аудіопроц / APP_SELECTOR_CHIP
 
 Перемикання орієнтації: runtime — lcdtest orient 1 1 0 / lcdtest orient 1 0 1; 
 для збірки під монтаж — pio run -t menuconfig → Audio controller UI → Display mounting orientation.
@@ -55,4 +52,18 @@ enccal
   enccal <detents>
   enccal stop
   enccal off
+
+тест-патерн дисплея
+  lcdtest fill   
+  lcdtest grad
+  lcdtest corners
+  lcdtest border
+lcdtest orient <a> <b> <c>       runtime-орієнтація (напр. 1 1 0 або 1 0 1)
 ----------------------------------
+
+------------ПРИМІТКИ------------
+ST7789 offsets верифіковані: 0 35
+UA-шрифт: основний + fallback (lv_font_conv, font.c); нові UA-рядки перевіряти на покриття
+help.txt оновлюється синхронно з dev-командами; docs-коміти включають help.txt
+
+git log --oneline -3

@@ -11,7 +11,7 @@
 | 2 | audio-B | DSP-ланцюжок: DC-blocker → per-source trim → 10-смуговий EQ (biquad peaking) → гучність -90..0 dB з ramp → лімітер | ✅ | e46472b, 9796ebc |
 | 3 | tda7318 | I2C-драйвер селектора: мапа джерело→канал, mute у STANDBY, mute-перед-переключенням | ✅ | c1803d4 |
 | 4 | input | Кнопки (GPIO ISR→черга) + енкодер (PCNT) + антидребезг + short/long | ✅ | ca5cf80, a4e95df |
-| 5 | ui | ST7789 SPI + підсвітка LEDC 5 kHz + LVGL 9: сторінки Main / Source / EQ / Settings / Info, навігація за картою керування v2.2.5, рендер стану моделі через події; draw-буфери LVGL у PSRAM + bounce-buffer esp_lcd в internal RAM; bring-up через dev-команду lcdtest | ⏳ | |
+| 5 | ui | ST7789 SPI + підсвітка LEDC 5 kHz + LVGL 9: сторінки Main / Source / EQ / Settings / Info, навігація за картою керування v2.2.5, рендер стану моделі через події; draw-буфери LVGL у PSRAM + bounce-buffer esp_lcd в internal RAM; bring-up через dev-команду lcdtest | ✅ | d6885c9 |
 | 6 | ir | RMT RX + декодер RC5 + режим навчання (захват коду → прив'язка дії → NVS) + коректна обробка RC5-repeats | ⏳ | |
 | 7 | web | Wi-Fi STA + AP captive portal provisioning + HTTP REST + WebSocket + mDNS (audioctrl.local) + український Web UI з ассетами у LittleFS + OTA-hook (API-заглушка) | ⏳ | |
 | 8 | power/state | State machine BOOT/RUN/STANDBY/ERROR: зупинка I2S-тактів, XSMT+TDA mute, Wi-Fi/дисплей off, зниження частоти через esp_pm, wake ТІЛЬКИ POWER-кнопка або RC5-power (фільтр подій) | ⏳ | |
@@ -128,6 +128,7 @@
 
 | Дата | Версія | Зміни |
 |---|---|---|
+| 2026-09-26 | v2.2.6 | offsets ST7789 (0,35); APP_UI_ORIENT; UA fallback-шрифт із вимогою покриття; double bounce + panel mutex; конвенція help.txt |
 | 2026-09-25 | v2.2.5 | input_event_t у system.h; CPD default 2 + enccal; архітектура: модель розсилає стан, HMI викликає сетери, power володіє POWER; ui 5.1+5.2 об'єднані (LVGL одразу); карта керування v2.2.5 |
 | 2026-09-24 | v2.2.4 | Селектор: CONFIG_APP_SELECTOR_CHIP (TDA7318/PT2313); mute = attenuation 0x3F (немає hw mute-біта); tone-flat коди чипо-залежні; dev-консоль = власний line-reader |
 | 2026-09-24 | v2.2.3 | Уточнено критерій перетину сусідніх смуг EQ (≤0.5 dB @ ±2 dB, ≤1.5 dB @ ±6 dB, by design); лімітер: peak-catch attack з інваріантом env ≥ |x| |
