@@ -12,6 +12,15 @@ typedef struct {
     bool display_backlight_on;
 } settings_t;
 
+typedef struct {
+    uint8_t system;
+    uint8_t command;
+    uint8_t action;
+} ir_pair_t;
+
 esp_err_t settings_init(void);
 esp_err_t settings_load(settings_t *out_settings);
 esp_err_t settings_save(const settings_t *settings);
+
+esp_err_t settings_ir_map_load(ir_pair_t *pairs, uint16_t *count);
+esp_err_t settings_ir_map_save(const ir_pair_t *pairs, uint16_t count);

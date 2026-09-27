@@ -1,5 +1,4 @@
-﻿// Файл: components/system/include/system.h
-#pragma once
+﻿#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -15,6 +14,7 @@ typedef enum {
     SYSTEM_EVENT_INPUT,
     SYSTEM_EVENT_IR,
     SYSTEM_EVT_AUDIO_STATE,
+    SYSTEM_EVT_POWER_TOGGLE,
     SYSTEM_EVENT_MAX
 } system_event_id_t;
 

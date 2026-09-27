@@ -53,6 +53,31 @@ enccal
   enccal stop
   enccal off
 
+Навчання IR: захопити наступний RC5-код і прив'язати до дії (таймаут 10 с)
+  irlearn vol_up
+  irlearn vol_down
+  irlearn mute
+  irlearn src_next
+  irlearn src_prev
+  irlearn power
+
+irunlearn <system> <command>
+irunlearn all
+  Видалити прив'язку IR-коду (або всю карту) зі збереженням у NVS
+
+
+iractions
+  Список дій, доступних для прив'язки IR
+
+irmap
+  Друк поточної карти прив'язок IR-кодів (code → action)
+
+irstats
+  Статистика IR-декодера (кількість rx-блоків, коректних фреймів, помилок, latency EMA)
+
+irdump
+  Дамп останнього прийнятого IR-блоку (тривалості імпульсів, пів-біти) — діагностика протоколу  
+
 тест-патерн дисплея
   lcdtest fill   
   lcdtest grad

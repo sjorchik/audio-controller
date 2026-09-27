@@ -1,6 +1,5 @@
 ﻿idf_component_register(
-    SRCS "ir.c"
+    SRCS "ir.c" "ir_dev.c"
     INCLUDE_DIRS "include"
-    REQUIRES bsp system esp_common log
-    PRIV_REQUIRES driver
+    REQUIRES driver settings audio tda7318 system console
 )
