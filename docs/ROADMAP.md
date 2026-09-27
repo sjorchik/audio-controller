@@ -11,12 +11,15 @@
 | 2 | audio-B | DSP-ланцюжок: DC-blocker → per-source trim → 10-смуговий EQ (biquad peaking) → гучність -90..0 dB з ramp → лімітер | ✅ | e46472b, 9796ebc |
 | 3 | tda7318 | I2C-драйвер селектора: мапа джерело→канал, mute у STANDBY, mute-перед-переключенням | ✅ | c1803d4 |
 | 4 | input | Кнопки (GPIO ISR→черга) + енкодер (PCNT) + антидребезг + short/long | ✅ | ca5cf80, a4e95df |
-| 5 | ui | ST7789 SPI + підсвітка LEDC 5 kHz + LVGL 9: сторінки Main / Source / EQ / Settings / Info, навігація за картою керування v2.2.5, рендер стану моделі через події; draw-буфери LVGL у PSRAM + bounce-buffer esp_lcd в internal RAM; bring-up через dev-команду lcdtest | ✅ | d6885c9 |
-| 6 | ir | RMT RX + декодер RC5 + режим навчання (захват коду → прив'язка дії → NVS) + коректна обробка RC5-repeats | ⏳ | |
-| 7 | web | Wi-Fi STA + AP captive portal provisioning + HTTP REST + WebSocket + mDNS (audioctrl.local) + український Web UI з ассетами у LittleFS + OTA-hook (API-заглушка) | ⏳ | |
-| 8 | power/state | State machine BOOT/RUN/STANDBY/ERROR: зупинка I2S-тактів, XSMT+TDA mute, Wi-Fi/дисплей off, зниження частоти через esp_pm, wake ТІЛЬКИ POWER-кнопка або RC5-power (фільтр подій) | ⏳ | |
-| 9 | settings | NVS: джерело, гучність, trim, EQ, пресети, підсвітка, IR-карта, останній стан, Wi-Fi-креденшли; версіонування і міграція; відкладений запис проти зносу flash | ⏳ | |
-| 10 | tests | Юніт-тести (коефіцієнти EQ, ramp, декодер RC5) + апаратні інтеграційні перевірки; регресійний гейт перед кожним комітом | ⏳ | |
+| 5 | ui | Функціональна база: ST7789 SPI + підсвітка LEDC 5 kHz + LVGL 9, 5 сторінок, навігація за картою керування | ✅ | d6885c9 |
+| 6 | ir | RMT RX + декодер RC5/RC5X + навчання (irlearn) + NVS-карта irmap + діагностика irstats/irdump/irunlearn | ✅ | 4e2b0cc |
+| 7 | wifi | STA + реконект + AP captive portal provisioning + NVS-креденшли через settings + події connected/lost + RSSI | ⏳ | |
+| 8 | radio | http-клієнт + MP3/AAC-LC + ресемплер 44.1→48 + mux у pipeline (джерело RADIO) + ICY StreamTitle + реконект + stations.json через settings | ⏳ | |
+| 9 | ui-visual | UA-родина шрифтів + іконочний шрифт + VU-метр + темна тема + екрани радіо (Now Playing, Station List, Favorites) + карта керування v2.3 | ⏳ | |
+| 10 | power/state | State machine BOOT/RUN/STANDBY/ERROR + зупинка/резюме декодера радіо + wake ТІЛЬКИ POWER/RC5-power | ⏳ | |
+| 11 | settings | NVS-центр: джерело, гучність, trim, EQ, пресети, IR-карта, Wi-Fi, станції/favorites/auto-resume, яскравість; версіонування + міграція | ⏳ | |
+| 12 | web | HTTP REST + WebSocket + mDNS + UA Web UI + сторінка радіо і редактор станцій + OTA-hook | ⏳ | |
+| 13 | tests | Інтеграційні перевірки + стрес радіо (60 хв стрім, цикли реконекту) + регресійний гейт | ⏳ | |
 
 ## Критерії приймання
 
@@ -128,6 +131,7 @@
 
 | Дата | Версія | Зміни |
 |---|---|---|
+| 2026-09-27 | v2.3 | Scope: інтернет-радіо (MP3/AAC, ресемплер 44.1→48, ICY, stations.json), візуальний редизайн UI (шрифти UA, іконки, VU, темна тема), перенумерація карти 7-13; примітки v2.2.7 (ir: rmt_rx, RC5X, рівнезалежні вікна) |
 | 2026-09-26 | v2.2.6 | offsets ST7789 (0,35); APP_UI_ORIENT; UA fallback-шрифт із вимогою покриття; double bounce + panel mutex; конвенція help.txt |
 | 2026-09-25 | v2.2.5 | input_event_t у system.h; CPD default 2 + enccal; архітектура: модель розсилає стан, HMI викликає сетери, power володіє POWER; ui 5.1+5.2 об'єднані (LVGL одразу); карта керування v2.2.5 |
 | 2026-09-24 | v2.2.4 | Селектор: CONFIG_APP_SELECTOR_CHIP (TDA7318/PT2313); mute = attenuation 0x3F (немає hw mute-біта); tone-flat коди чипо-залежні; dev-консоль = власний line-reader |
